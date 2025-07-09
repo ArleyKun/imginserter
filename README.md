@@ -14,6 +14,7 @@ This Python script inserts images into a Microsoft Word document. You can choose
   - Full Size – one image per page
   - Half Size – two images per page
 - Automatic formatting (margins, spacing, page breaks)
+- Multiple pictures supported
 
 ---
 

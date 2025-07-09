@@ -27,5 +27,6 @@ This Python script inserts images into a Microsoft Word document. You can choose
   - `colorama`
 
  Or install the dependencies using pip @cmd
- ``bash
+ 
+ ``
  pip install pywin32 colorama``

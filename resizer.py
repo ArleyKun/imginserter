@@ -6,7 +6,6 @@ from datetime import datetime
 
 init(autoreset=True)
 
-# sc
 def log_action(message):
     with open("log.txt", "a") as log_file:
         log_file.write(f"[{datetime.now()}] {message}\n")
@@ -40,28 +39,25 @@ ___________         _____\    \            _____    ____________    _____  _____
                         |___|/                                                             |___|/                    
 """ + Style.RESET_ALL)
 
-
-#inputs
 def get_user_input():
-    print(Fore.CYAN + Style.BRIGHT + "\nChoose Paper Size:")
-    print(Fore.WHITE + "  1 - " + Fore.LIGHTGREEN_EX + "SHORT (8.5 x 11)")
-    print(Fore.WHITE + "  2 - " + Fore.LIGHTGREEN_EX + "A4    (8.27 x 11.69)")
-    print(Fore.WHITE + "  3 - " + Fore.LIGHTGREEN_EX + "LONG  (8.5 x 13)")
-    paper = input(Fore.YELLOW + Style.BRIGHT + "\nEnter paper size (1/2/3): ").strip()
+    print(Fore.GREEN + "Choose Paper Size:")
+    print("1 - SHORT (8.5 x 11)")
+    print("2 - A4    (8.27 x 11.69)")
+    print("3 - LONG  (8.5 x 13)")
+    paper = input(Fore.YELLOW + "Enter paper size (1/2/3): ").strip()
 
-    print(Fore.CYAN + Style.BRIGHT + "\nChoose Image Size:")
-    print(Fore.WHITE + "  1 - " + Fore.LIGHTMAGENTA_EX + "Full Size (1 per page)")
-    print(Fore.WHITE + "  2 - " + Fore.LIGHTMAGENTA_EX + "Half Size (2 per page)")
-    size = input(Fore.YELLOW + Style.BRIGHT + "\nEnter image size (1/2): ").strip()
+    print(Fore.GREEN + "\nChoose Layout:")
+    print("1 - Full Size")
+    print("2 - Half Size")
+    print("3 - 4 Pics Layout (2x2 Grid)")
+    size = input(Fore.YELLOW + "Enter layout option (1/2/3): ").strip()
 
-    if paper not in ['1', '2', '3'] or size not in ['1', '2']:
-        print(Fore.RED + Style.BRIGHT + "\nInvalid input. Exiting.")
+    if paper not in ['1', '2', '3'] or size not in ['1', '2', '3']:
+        print(Fore.RED + "Invalid input. Exiting.")
         exit()
 
     return paper, size
 
-
-#selct
 def select_images():
     Tk().withdraw()
     paths = filedialog.askopenfilenames(title="Select Image(s)", filetypes=[("Image Files", "*.jpg *.jpeg *.png")])
@@ -70,7 +66,6 @@ def select_images():
         exit()
     return paths
 
-#paper sizes
 page_sizes = {
     '1': (8.5, 11),      # SHORT
     '2': (8.27, 11.69),  # A4
@@ -89,20 +84,28 @@ image_sizes = {
     '3': {'1': (8, 12.5), '2': (8, 6.25)}
 }
 
-#page set
-def setup_page(doc, paper_code):
+grid_image_sizes = {
+    '1': (5.25, 3.94),  # SHORT
+    '2': (5.57, 3.75),  # A4
+    '3': (6.24, 3.95),  # LONG
+}
+
+def setup_page(doc, paper_code, landscape=False):
     section = doc.PageSetup
     width, height = page_sizes[paper_code]
     margin = margins[paper_code]
 
+    if landscape:
+        width, height = height, width
+
     section.PageWidth = width * 72
     section.PageHeight = height * 72
-    section.TopMargin = margin['top'] * 72 #cv to pts
+    section.TopMargin = margin['top'] * 72
     section.BottomMargin = margin['bottom'] * 72
     section.LeftMargin = margin['left'] * 72
     section.RightMargin = margin['right'] * 72
 
-#full size
+
 def insert_full_size_images(doc, sel, image_paths, img_width, img_height):
     for i, img_path in enumerate(image_paths):
         sel.ParagraphFormat.SpaceBefore = 0
@@ -122,12 +125,10 @@ def insert_full_size_images(doc, sel, image_paths, img_width, img_height):
             sel.InsertBreak(7)
             sel.Collapse(0)
 
-#clean
     for p in doc.Paragraphs:
         if p.Range.Text.strip() == "":
             p.Range.Delete()
 
-#half size
 def insert_half_size_images(doc, image_paths, img_width, img_height, page_width, page_height):
     total = len(image_paths)
     i = 0
@@ -170,27 +171,113 @@ def insert_half_size_images(doc, image_paths, img_width, img_height, page_width,
             doc.Paragraphs.Add()
             doc.Range(doc.Content.End - 1).InsertBreak(7)
 
-#run
+# 2x2grid
+def insert_grid_images(doc, image_paths, img_width, img_height, page_width, page_height):
+    img_width_pt = img_width * 72
+    img_height_pt = img_height * 72
+    margin_left = 0.25 * 72
+    margin_top = 0.19 * 72
+    spacing_x = 0.2 * 72  # columns
+    spacing_y = 0.2 * 72  # rows
+
+    i = 0
+    total = len(image_paths)
+
+    while i < total:
+        col1_left = margin_left
+        col2_left = margin_left + img_width_pt + spacing_x
+        row1_top = margin_top
+        row2_top = margin_top + img_height_pt + spacing_y
+
+        # Tleft
+        if i < total:
+            doc.Shapes.AddPicture(
+                FileName=os.path.abspath(image_paths[i]),
+                LinkToFile=False,
+                SaveWithDocument=True,
+                Left=col1_left,
+                Top=row1_top,
+                Width=img_width_pt,
+                Height=img_height_pt
+            )
+            log_action(f"Inserted top-left: {os.path.basename(image_paths[i])}")
+
+        # Tright
+        if i + 1 < total:
+            doc.Shapes.AddPicture(
+                FileName=os.path.abspath(image_paths[i + 1]),
+                LinkToFile=False,
+                SaveWithDocument=True,
+                Left=col2_left,
+                Top=row1_top,
+                Width=img_width_pt,
+                Height=img_height_pt
+            )
+            log_action(f"Inserted top-right: {os.path.basename(image_paths[i + 1])}")
+
+        # Bleft
+        if i + 2 < total:
+            doc.Shapes.AddPicture(
+                FileName=os.path.abspath(image_paths[i + 2]),
+                LinkToFile=False,
+                SaveWithDocument=True,
+                Left=col1_left,
+                Top=row2_top,
+                Width=img_width_pt,
+                Height=img_height_pt
+            )
+            log_action(f"Inserted bottom-left: {os.path.basename(image_paths[i + 2])}")
+
+        # Bright
+        if i + 3 < total:
+            doc.Shapes.AddPicture(
+                FileName=os.path.abspath(image_paths[i + 3]),
+                LinkToFile=False,
+                SaveWithDocument=True,
+                Left=col2_left,
+                Top=row2_top,
+                Width=img_width_pt,
+                Height=img_height_pt
+            )
+            log_action(f"Inserted bottom-right: {os.path.basename(image_paths[i + 3])}")
+
+        i += 4
+        if i < total:
+            doc.Paragraphs.Add()
+            doc.Range(doc.Content.End - 1).InsertBreak(7)
+
 def main():
     show_banner()
-    paper_input, size_input = get_user_input()
+    paper_code, size_code = get_user_input()
     image_paths = select_images()
 
-    word = win32.Dispatch("Word.Application")
-    word.Visible = True
+    word = win32.gencache.EnsureDispatch("Word.Application")
     doc = word.Documents.Add()
     sel = word.Selection
 
-    setup_page(doc, paper_input)
-    img_width_in, img_height_in = image_sizes[paper_input][size_input]
+    # ls opt3
+    is_landscape = size_code == '3'
+    setup_page(doc, paper_code, landscape=is_landscape)
 
-    if size_input == '1':
-        insert_full_size_images(doc, sel, image_paths, img_width_in * 72, img_height_in * 72)
-    else:
-        page_width, page_height = page_sizes[paper_input]
-        insert_half_size_images(doc, image_paths, img_width_in, img_height_in, page_width, page_height)
+    width, height = page_sizes[paper_code]
+    if is_landscape:
+        width, height = height, width # word calc
 
-    print(Fore.CYAN + f"\nInserted {len(image_paths)} image(s).\n" + Style.RESET_ALL)
+    if size_code == '1':  # full size
+        img_width, img_height = image_sizes[paper_code]['1']
+        insert_full_size_images(doc, sel, image_paths, img_width * 72, img_height * 72)
+
+    elif size_code == '2':  # half size
+        img_width, img_height = image_sizes[paper_code]['2']
+        insert_half_size_images(doc, image_paths, img_width, img_height, width, height)
+
+    elif size_code == '3':  # 4 pics Layout
+        img_width, img_height = grid_image_sizes[paper_code]
+        insert_grid_images(doc, image_paths, img_width, img_height, width, height)
+
+
+    word.Visible = True
+    log_action("Finished successfully.")
 
 if __name__ == "__main__":
     main()

@@ -1,4 +1,5 @@
 import win32com.client as win32
+from win32com.client import constants
 import os
 from tkinter import Tk, filedialog
 from colorama import init, Fore, Style
@@ -97,6 +98,9 @@ def setup_page(doc, paper_code, landscape=False):
 
     if landscape:
         width, height = height, width
+        section.Orientation = constants.wdOrientLandscape
+    else:
+        section.Orientation = constants.wdOrientPortrait
 
     section.PageWidth = width * 72
     section.PageHeight = height * 72
@@ -104,7 +108,6 @@ def setup_page(doc, paper_code, landscape=False):
     section.BottomMargin = margin['bottom'] * 72
     section.LeftMargin = margin['left'] * 72
     section.RightMargin = margin['right'] * 72
-
 
 def insert_full_size_images(doc, sel, image_paths, img_width, img_height):
     for i, img_path in enumerate(image_paths):

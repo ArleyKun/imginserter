@@ -50,14 +50,26 @@ def get_user_input():
     print(Fore.GREEN + "\nChoose Layout:")
     print("1 - Full Size")
     print("2 - Half Size")
-    print("3 - 4 Pics Layout (2x2 Grid)")
+    print("3 - 3 Pics (2 top, 1 centered below)")
+    print("4 - 4 Pics Layout (2x2 Grid)")
     size = input(Fore.YELLOW + "Enter layout option (1/2/3): ").strip()
 
-    if paper not in ['1', '2', '3'] or size not in ['1', '2', '3']:
+    if paper not in ['1', '2', '3'] or size not in ['1', '2', '3', '4']:
         print(Fore.RED + "Invalid input. Exiting.")
         exit()
 
-    return paper, size
+    orientation = None
+    if size == '4':
+        print(Fore.GREEN + "\nChoose Orientation for 4 Pics Layout:")
+        print("1 - Landscape")
+        print("2 - Portrait")
+        orientation_input = input(Fore.YELLOW + "Enter orientation (1/2): ").strip()
+        if orientation_input not in ['1', '2']:
+            print(Fore.RED + "Invalid input. Exiting.")
+            exit()
+        orientation = 'landscape' if orientation_input == '1' else 'portrait'
+
+    return paper, size, orientation
 
 def select_images():
     Tk().withdraw()
@@ -74,9 +86,9 @@ page_sizes = {
 }
 
 margins = {
-    '1': {'top': 0.25, 'bottom': 0.5, 'left': 0.25, 'right': 0.5},
-    '2': {'top': 0.25, 'bottom': 1.0, 'left': 0.19, 'right': 1.0},
-    '3': {'top': 0.25, 'bottom': 0.5, 'left': 0.25, 'right': 0.5}
+    '1': {'top': 0.25, 'bottom': 0.19, 'left': 0.25, 'right': 0.5},
+    '2': {'top': 0.25, 'bottom': 0.19, 'left': 0.19, 'right': 1.0},
+    '3': {'top': 0.25, 'bottom': 0.19, 'left': 0.25, 'right': 0.5}
 }
 
 image_sizes = {
@@ -89,6 +101,12 @@ grid_image_sizes = {
     '1': (5.25, 3.94),  # SHORT
     '2': (5.57, 3.75),  # A4
     '3': (6.24, 3.95),  # LONG
+}
+
+three_pic_layout_sizes = {
+    '1': (4.03, 3.93),  # SHORT
+    '2': (3.92, 3.93),  # A4
+    '3': (4.03, 3.93)   # LONG
 }
 
 def setup_page(doc, paper_code, landscape=False):
@@ -249,9 +267,64 @@ def insert_grid_images(doc, image_paths, img_width, img_height, page_width, page
             doc.Paragraphs.Add()
             doc.Range(doc.Content.End - 1).InsertBreak(7)
 
+def insert_three_pic_layout(doc, image_paths, paper_code, page_width, page_height):
+    if len(image_paths) < 3:
+        print(Fore.RED + "Need exactly 3 images for this layout.")
+        return
+
+    img_width_in, img_height_in = three_pic_layout_sizes[paper_code]
+    img_width = img_width_in * 72
+    img_height = img_height_in * 72
+
+    spacing = 0.1 * 72  # space between top images
+    top_y = 1 * 72
+
+    # top row (2 images)
+    total_width = img_width * 2 + spacing
+    start_x = (page_width * 72 - total_width) / 2
+    left1 = start_x
+    left2 = start_x + img_width + spacing
+
+    doc.Shapes.AddPicture(
+        FileName=os.path.abspath(image_paths[0]),
+        LinkToFile=False,
+        SaveWithDocument=True,
+        Left=left1,
+        Top=top_y,
+        Width=img_width,
+        Height=img_height
+    )
+    log_action(f"Inserted top-left: {os.path.basename(image_paths[0])}")
+
+    doc.Shapes.AddPicture(
+        FileName=os.path.abspath(image_paths[1]),
+        LinkToFile=False,
+        SaveWithDocument=True,
+        Left=left2,
+        Top=top_y,
+        Width=img_width,
+        Height=img_height
+    )
+    log_action(f"Inserted top-right: {os.path.basename(image_paths[1])}")
+
+    # baba mimage
+    bottom_top = top_y + img_height + 0.1 * 72
+    bottom_left = (page_width * 72 - img_width) / 2
+
+    doc.Shapes.AddPicture(
+        FileName=os.path.abspath(image_paths[2]),
+        LinkToFile=False,
+        SaveWithDocument=True,
+        Left=bottom_left,
+        Top=bottom_top,
+        Width=img_width,
+        Height=img_height
+    )
+    log_action(f"Inserted bottom-center: {os.path.basename(image_paths[2])}")
+
 def main():
     show_banner()
-    paper_code, size_code = get_user_input()
+    paper_code, size_code, orientation = get_user_input()
     image_paths = select_images()
 
     word = win32.gencache.EnsureDispatch("Word.Application")
@@ -259,7 +332,7 @@ def main():
     sel = word.Selection
 
     # ls opt3
-    is_landscape = size_code == '3'
+    is_landscape = orientation == 'landscape' if size_code == '4' else False
     setup_page(doc, paper_code, landscape=is_landscape)
 
     width, height = page_sizes[paper_code]
@@ -274,8 +347,22 @@ def main():
         img_width, img_height = image_sizes[paper_code]['2']
         insert_half_size_images(doc, image_paths, img_width, img_height, width, height)
 
-    elif size_code == '3':  # 4 pics Layout
-        img_width, img_height = grid_image_sizes[paper_code]
+    elif size_code == '3':  # 3 pictures layout
+        if len(image_paths) < 3:
+            print(Fore.RED + "You need to select exactly 3 images for this layout.")
+            exit()
+        elif len(image_paths) > 3:
+            print(Fore.YELLOW + f"You selected more than 3 images. Only the first 3 will be used.")
+            image_paths = image_paths[:3]
+        
+        insert_three_pic_layout(doc, image_paths, paper_code, width, height)
+
+    elif size_code == '4':  # 4 pics Layout
+        if orientation == 'landscape':
+            img_width, img_height = grid_image_sizes[paper_code]
+        else:
+            img_height, img_width = grid_image_sizes[paper_code] #pt, reverses array values
+
         insert_grid_images(doc, image_paths, img_width, img_height, width, height)
 
 

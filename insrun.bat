@@ -1,5 +1,5 @@
 @echo off
-img inserter @ word by yel
+title img inserter @ word by yel
 :loop
 cls
 cd /d "%~dp0"

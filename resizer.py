@@ -73,7 +73,7 @@ def get_user_input():
 
 def select_images():
     Tk().withdraw()
-    paths = filedialog.askopenfilenames(title="Select Image(s)", filetypes=[("Image Files", "*.jpg *.jpeg *.png")])
+    paths = filedialog.askopenfilenames(title="Select Image(s)", filetypes=[("Image Files", "*.jpg *.jpeg *.png *.jfif *.jif *.jpe *.svg")])
     if not paths:
         print(Fore.RED + "No images selected. Exiting.")
         exit()

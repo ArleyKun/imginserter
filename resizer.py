@@ -59,15 +59,16 @@ def get_user_input():
         exit()
 
     orientation = None
-    if size == '4':
-        print(Fore.GREEN + "\nChoose Orientation for 4 Pics Layout:")
-        print("1 - Landscape")
-        print("2 - Portrait")
+    if size in ['1', '2', '4']:
+        print(Fore.GREEN + "\nChoose Orientation:")
+        print("1 - Portrait")
+        print("2 - Landscape")
         orientation_input = input(Fore.YELLOW + "Enter orientation (1/2): ").strip()
         if orientation_input not in ['1', '2']:
             print(Fore.RED + "Invalid input. Exiting.")
             exit()
-        orientation = 'landscape' if orientation_input == '1' else 'portrait'
+        orientation = 'portrait' if orientation_input == '1' else 'landscape'
+
 
     return paper, size, orientation
 
@@ -332,7 +333,7 @@ def main():
     sel = word.Selection
 
     # ls opt3
-    is_landscape = orientation == 'landscape' if size_code == '4' else False
+    is_landscape = orientation == 'landscape'
     setup_page(doc, paper_code, landscape=is_landscape)
 
     width, height = page_sizes[paper_code]
@@ -341,11 +342,33 @@ def main():
 
     if size_code == '1':  # full size
         img_width, img_height = image_sizes[paper_code]['1']
-        insert_full_size_images(doc, sel, image_paths, img_width * 72, img_height * 72)
+
+        if is_landscape:
+            img_width, img_height = img_height, img_width  # swap for landscape
+
+        insert_full_size_images(
+            doc,
+            sel,
+            image_paths,
+            img_width * 72,
+            img_height * 72
+        )
+
 
     elif size_code == '2':  # half size
         img_width, img_height = image_sizes[paper_code]['2']
-        insert_half_size_images(doc, image_paths, img_width, img_height, width, height)
+
+        if is_landscape:
+            img_width, img_height = img_height, img_width  # swap for landscape
+
+        insert_half_size_images(
+            doc,
+            image_paths,
+            img_width,
+            img_height,
+            width,
+            height
+        )
 
     elif size_code == '3':  # 3 pictures layout
         if len(image_paths) < 3:
